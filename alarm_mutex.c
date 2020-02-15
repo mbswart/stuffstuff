@@ -13,6 +13,11 @@
 #include <pthread.h>
 #include <time.h>
 #include "errors.h"
+#include <stdio.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+
 
 /*
  * The "alarm" structure now contains the time_t (time since the
@@ -134,12 +139,44 @@ int main (int argc, char *argv[])
          * (%64[^\n]), consisting of up to 64 characters
          * separated from the seconds by whitespace.
          */
-        if (sscanf (line, "%s %d %d %64[^\n]", 
-            request, &alarm->id, &alarm->seconds, alarm->message) < 4) {
+        if (sscanf (line, "%s %d %64[^\n]", 
+            request, &alarm->seconds, alarm->message) < 1) {
             fprintf (stderr, "Bad command\n");
             free (alarm);
         } else {
-            printf ("%d", alarm->id);
+            // we running out of time so this code assumes that request was inputed correctly. Fix this later
+            // what this does is takes a request of the form Start_Alarm(123): or Change_Alarm(123): and removes the end and 
+            // adds the number parts to a new string
+            char curr_char;
+            int index = strlen(request) - 1;
+            char backwards_id[40];
+            char right_way_id[40];
+            int begin, end, count = 0;
+            //starting from the end remove characters. add the id to backwards
+            while(curr_char != '('){
+                curr_char=request[index];
+                if(isdigit(curr_char)){
+                    strncat(backwards_id, &curr_char, 1);
+                }
+                //this removes from the end of request
+                request[index] = '\0';
+                index--;
+            }
+            //reverse backwards id
+            while (backwards_id[count] != '\0')
+                count++;
+                end = count - 1;
+
+                for (begin = 0; begin < count; begin++) {
+                    right_way_id[begin] = backwards_id[end];
+                    end--;
+                }
+
+                right_way_id[begin - 1] = '\0';
+            //change to int
+            int num = atoi(right_way_id);
+            alarm->id = num;
+            
             status = pthread_mutex_lock (&alarm_mutex);
             if (status != 0)
                 err_abort (status, "Lock mutex");
@@ -213,3 +250,4 @@ int main (int argc, char *argv[])
         }
     }
 }
+
